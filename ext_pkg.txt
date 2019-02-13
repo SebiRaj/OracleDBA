@@ -1,0 +1,44 @@
+set line 32767
+column timecol new_value timestamp
+column dbname new_value db_nm
+
+select name as dbname from v$database;
+
+set long 900000 pages 0 lines 32767 trimspool on echo off
+col txt for a32767 word_wrapped
+set verify off
+set feedback off
+set long 900000
+
+REM this procedure puts semi colon for each ddl
+
+begin
+DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'SQLTERMINATOR',true);
+end;
+/
+
+
+define username=&usernm
+define pkg_nm=&pkg_nm
+
+spool Pkg_extract_&&username_&&pkg_nm&&db_nm..sql
+
+SELECT dbms_metadata.get_ddl('PACKAGE',upper('&&pkg_nm'),upper('&&username')) txt from dual;
+
+SELECT dbms_metadata.get_dependent_ddl('OBJECT_GRANT',upper('&&pkg_nm'),upper('&&username')) txt FROM  dual;
+
+
+begin
+DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'SQLTERMINATOR',true);
+end;
+/
+
+SELECT dbms_metadata.get_ddl('SYNONYM',TABLE_NAME)||';' txt from dba_synonyms 
+where TABLE_OWNER in (upper('&&username')) and TABLE_NAME=upper(upper('&&pkg_nm'));
+
+
+spool off
+
+
+undefine username
+undefine pkg_nm
